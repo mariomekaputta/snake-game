@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Snake II – Nokia</title>
+<link href="https://fonts.googleapis.com/css2?family=VT323&display=swap" rel="stylesheet">
+<style>
+:root{--page:#e9ecef;--body:#2b3a55;--body2:#1f2b40;--key:#c9d1dc;--keytx:#1f2b40;--lcd:#9cb38c;--ink:#243021;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--page:#14171c;--body:#222d44;--body2:#182033;--key:#aab4c3}}
+:root[data-theme="dark"]{--page:#14171c;--body:#222d44;--body2:#182033;--key:#aab4c3}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;min-height:100%}
+body{background:var(--page);display:flex;justify-content:center;align-items:center;min-height:100vh;font-family:system-ui,sans-serif;padding:16px}
+.phone{width:min(92vw,360px);background:linear-gradient(160deg,var(--body),var(--body2));border-radius:36px 36px 56px 56px;padding:26px 22px 28px;box-shadow:0 18px 40px rgba(0,0,0,.35)}
+.brand{text-align:center;color:#d6deea;letter-spacing:.35em;font-weight:700;font-size:13px;margin-bottom:12px}
+.bezel{background:#0f1520;border-radius:16px;padding:12px}
+.lcd{position:relative;background:var(--lcd);border-radius:6px;overflow:hidden;container-type:inline-size;box-shadow:inset 0 0 14px rgba(0,0,0,.35)}
+canvas{display:block;width:100%;aspect-ratio:84/48;image-rendering:pixelated}
+.lcd::after{content:"";position:absolute;inset:0;pointer-events:none;
+background:repeating-linear-gradient(0deg,rgba(0,0,0,.07) 0 1px,transparent 1px calc(100cqw/84)),repeating-linear-gradient(90deg,rgba(0,0,0,.07) 0 1px,transparent 1px calc(100cqw/84))}
+#ov{position:absolute;inset:0;display:none;flex-direction:column;justify-content:center;padding:0 7%;color:var(--ink);font-family:"VT323","Courier New",monospace;font-size:clamp(17px,7cqw,26px);line-height:1.15;background:var(--lcd);z-index:2;text-transform:uppercase}
+#ov h1{margin:0 0 4px;font-size:1.5em;font-weight:400;text-align:center;letter-spacing:.08em}
+#ov .row{padding:0 6px}#ov .sel{background:var(--ink);color:var(--lcd)}
+#ov .c{text-align:center}
+.keys{margin-top:16px;display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.k{border:0;border-radius:14px;background:var(--key);color:var(--keytx);height:46px;font:700 18px system-ui,sans-serif;box-shadow:0 3px 0 rgba(0,0,0,.35);cursor:pointer;user-select:none;touch-action:manipulation}
+.k:active{transform:translateY(2px);box-shadow:0 1px 0 rgba(0,0,0,.35)}
+.k small{display:block;font-size:9px;font-weight:600;opacity:.7;margin-top:-2px}
+.hint{text-align:center;color:#9aa8c0;font-size:12px;margin-top:14px}
+</style>
+</head>
+<body>
+<div class="phone">
+  <div class="brand">NOKIA</div>
+  <div class="bezel"><div class="lcd"><canvas id="cv" width="84" height="48"></canvas><div id="ov"></div></div></div>
+  <div class="keys">
+    <button class="k" data-k="c">C<small>jeda / kembali</small></button>
+    <button class="k" data-k="up">2<small>atas</small></button>
+    <button class="k" data-k="ok">OK<small>pilih</small></button>
+    <button class="k" data-k="left">4<small>kiri</small></button>
+    <button class="k" data-k="down">8<small>bawah</small></button>
+    <button class="k" data-k="right">6<small>kanan</small></button>
+  </div>
+  <div class="hint">Keyboard: panah / WASD · Enter = OK · P / Esc = jeda</div>
+</div>
+<script>
+const C=21,R=10,TOP=8,BT=30,MAZES=["Tanpa maze","Maze 1","Maze 2"];
+const cv=document.getElementById('cv'),ctx=cv.getContext('2d'),ov=document.getElementById('ov');
+const BG=getComputedStyle(document.documentElement).getPropertyValue('--lcd').trim()||'#9cb38c',INK='#243021';
+const DIG=["111101101101111","010110010010111","111001111100111","111001111001111","101101111001001","111100111001111","111100111101111","111001001001001","111101111101111","111101111001111"];
+const HEART=[".##.##.","#######","#######",".#####.","..###..","...#..."];
+let mode='menu',sel=0,level=1,maze=0,hi=0,timer=null;
+try{hi=+localStorage.getItem('snake2hi')||0}catch(e){}
+let s,dir,q,food,bonus,score,eaten,grow,miss,walls;
+
+function mkWalls(){const w=new Set();const a=(x,y)=>w.add(x+','+y);
+ if(maze>=1){for(let x=0;x<C;x++){a(x,0);a(x,R-1)}for(let y=0;y<R;y++){a(0,y);a(C-1,y)}}
+ if(maze==2){for(let x=6;x<=14;x++){a(x,2);a(x,7)}}return w}
+function free(x,y){return !walls.has(x+','+y)&&!s.some(p=>p.x==x&&p.y==y)&&!(food&&food.x==x&&food.y==y)}
+function placeFood(){let x,y;do{x=Math.random()*C|0;y=Math.random()*R|0}while(!free(x,y));food={x,y}}
+function spawnBonus(){for(let i=0;i<200;i++){const x=Math.random()*(C-1)|0,y=Math.random()*(R-1)|0;
+ if([[0,0],[1,0],[0,1],[1,1]].every(d=>free(x+d[0],y+d[1]))){bonus={x,y,t:BT};return}}}
+function start(){walls=mkWalls();s=[{x:6,y:5},{x:5,y:5},{x:4,y:5},{x:3,y:5}];dir={x:1,y:0};q=[];food=null;bonus=null;
+ score=0;eaten=0;grow=0;miss=0;placeFood();mode='play';ov.style.display='none';draw();loop()}
+function loop(){clearTimeout(timer);if(mode!='play')return;tick();timer=setTimeout(loop,190-(level-1)*17)}
+function die(){mode='over';clearTimeout(timer);if(score>hi){hi=score;try{localStorage.setItem('snake2hi',hi)}catch(e){}}
+ draw();setTimeout(()=>{if(mode=='over')showOver()},700)}
+function tick(){
+ if(q.length)dir=q.shift();
+ let h={x:s[0].x+dir.x,y:s[0].y+dir.y};
+ if(maze==0){h.x=(h.x+C)%C;h.y=(h.y+R)%R}else if(walls.has(h.x+','+h.y))return die();
+ if(grow>0)grow--;else s.pop();
+ if(s.some(p=>p.x==h.x&&p.y==h.y))return die();
+ s.unshift(h);
+ if(food&&h.x==food.x&&h.y==food.y){score+=7*level;eaten++;grow++;placeFood();if(eaten%5==0)spawnBonus()}
+ if(bonus){
+  if(h.x>=bonus.x&&h.x<=bonus.x+1&&h.y>=bonus.y&&h.y<=bonus.y+1){score+=bonusVal();bonus=null;miss=0;grow++}
+  else if(--bonus.t<=0){bonus=null;miss=Math.min(miss+1,5)}}
+ draw()}
+function bonusVal(){return Math.max(level,Math.round((5+miss)*7*level*bonus.t/BT))}
+
+function px(x,y,w=1,h=1){ctx.fillRect(x,y,w,h)}
+function num(n,x,y){String(n).split('').forEach((d,i)=>{const g=DIG[d];for(let j=0;j<15;j++)if(g[j]=='1')px(x+i*4+j%3,y+(j/3|0))})}
+function draw(){
+ ctx.fillStyle=BG;ctx.fillRect(0,0,84,48);ctx.fillStyle=INK;
+ num(score,2,1);px(0,7,84,1);
+ if(bonus){const w=Math.ceil(bonus.t/BT*30);px(82-w,2,w,3)}
+ walls&&walls.forEach(k=>{const[x,y]=k.split(',').map(Number);px(x*4,TOP+y*4,4,4)});
+ if(food)[[1,0],[0,1],[1,1],[2,1],[1,2]].forEach(d=>px(food.x*4+d[0],TOP+food.y*4+d[1]));
+ if(bonus&&(bonus.t>10||bonus.t%2==0))HEART.forEach((r,j)=>{for(let i=0;i<7;i++)if(r[i]=='#')px(bonus.x*4+i,TOP+bonus.y*4+1+j)});
+ s&&s.forEach((p,i)=>{ctx.fillStyle=INK;px(p.x*4,TOP+p.y*4,3,3);
+  if(i==0&&mode!='over'){ctx.fillStyle=BG;px(p.x*4+1,TOP+p.y*4+1)}
+  if(mode=='over'&&i%2==0){ctx.fillStyle=BG;px(p.x*4+1,TOP+p.y*4+1)}});
+}
+function menu(){mode='menu';clearTimeout(timer);const r=(i,t)=>`<div class="row ${sel==i?'sel':''}">${t}</div>`;
+ ov.style.display='flex';ov.innerHTML=`<h1>Snake II</h1>${r(0,'Main')}${r(1,'Level: &lt; '+level+' &gt;')}${r(2,'&lt; '+MAZES[maze]+' &gt;')}<div class="c" style="margin-top:4px;font-size:.8em">Skor tertinggi ${hi}</div>`}
+function showOver(){ov.style.display='flex';ov.innerHTML=`<h1>Game Over</h1><div class="c">Skor: ${score}</div><div class="c">Tertinggi: ${hi}</div><div class="c" style="margin-top:6px;font-size:.8em">Tekan OK</div>`}
+function showPause(){ov.style.display='flex';ov.innerHTML=`<h1>Jeda</h1><div class="c">Skor: ${score}</div><div class="c" style="margin-top:6px;font-size:.8em">OK / C = lanjut</div>`}
+
+const V={up:{x:0,y:-1},down:{x:0,y:1},left:{x:-1,y:0},right:{x:1,y:0}};
+function press(k){
+ if(mode=='menu'){
+  if(k=='up')sel=(sel+2)%3;else if(k=='down')sel=(sel+1)%3;
+  else if(k=='left'||k=='right'){const d=k=='left'?-1:1;if(sel==1)level=(level-1+d+9)%9+1;if(sel==2)maze=(maze+d+3)%3}
+  else if(k=='ok')return start();
+  menu()}
+ else if(mode=='play'){
+  if(k=='c'||k=='ok'){mode='pause';clearTimeout(timer);showPause()}
+  else if(V[k]){const last=q.length?q[q.length-1]:dir;
+   if(q.length<2&&!(V[k].x==-last.x&&V[k].y==-last.y)&&!(V[k].x==last.x&&V[k].y==last.y))q.push(V[k])}}
+ else if(mode=='pause'){if(k=='c'||k=='ok'){mode='play';ov.style.display='none';loop()}}
+ else if(mode=='over'){if(k=='ok'||k=='c')menu()}
+}
+document.querySelectorAll('.k').forEach(b=>b.addEventListener('pointerdown',e=>{e.preventDefault();press(b.dataset.k)}));
+const KM={ArrowUp:'up',ArrowDown:'down',ArrowLeft:'left',ArrowRight:'right',w:'up',s:'down',a:'left',d:'right',Enter:'ok',' ':'c',p:'c',Escape:'c',2:'up',8:'down',4:'left',6:'right'};
+addEventListener('keydown',e=>{const k=KM[e.key];if(k){e.preventDefault();press(k)}});
+draw();menu();
+</script>
+</body>
+</html>
