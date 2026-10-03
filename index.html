@@ -6,49 +6,195 @@
 <title>Snake II – Nokia</title>
 <link href="https://fonts.googleapis.com/css2?family=VT323&display=swap" rel="stylesheet">
 <style>
-:root{--page:#e9ecef;--body:#2b3a55;--body2:#1f2b40;--key:#c9d1dc;--keytx:#1f2b40;--lcd:#9cb38c;--ink:#243021;
+:root{--page:#e6e9ee;--page2:#cfd5de;--hint:#5d6b82;--chip:#fff;--chiptx:#1f2b40;
 box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
-@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--page:#14171c;--body:#222d44;--body2:#182033;--key:#aab4c3}}
-:root[data-theme="dark"]{--page:#14171c;--body:#222d44;--body2:#182033;--key:#aab4c3}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--page:#0f1216;--page2:#1c222c;--hint:#8794aa;--chip:#232a36;--chiptx:#dfe6f2}}
+:root[data-theme="dark"]{--page:#0f1216;--page2:#1c222c;--hint:#8794aa;--chip:#232a36;--chiptx:#dfe6f2}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{margin:0;min-height:100%}
-body{background:var(--page);display:flex;justify-content:center;align-items:center;min-height:100vh;font-family:system-ui,sans-serif;padding:16px}
-.phone{width:min(92vw,360px);background:linear-gradient(160deg,var(--body),var(--body2));border-radius:36px 36px 56px 56px;padding:26px 22px 28px;box-shadow:0 18px 40px rgba(0,0,0,.35)}
-.brand{text-align:center;color:#d6deea;letter-spacing:.35em;font-weight:700;font-size:13px;margin-bottom:12px}
-.bezel{background:#0f1520;border-radius:16px;padding:12px}
-.lcd{position:relative;background:var(--lcd);border-radius:6px;overflow:hidden;container-type:inline-size;box-shadow:inset 0 0 14px rgba(0,0,0,.35)}
-canvas{display:block;width:100%;aspect-ratio:84/48;image-rendering:pixelated}
-.lcd::after{content:"";position:absolute;inset:0;pointer-events:none;
-background:repeating-linear-gradient(0deg,rgba(0,0,0,.07) 0 1px,transparent 1px calc(100cqw/84)),repeating-linear-gradient(90deg,rgba(0,0,0,.07) 0 1px,transparent 1px calc(100cqw/84))}
-#ov{position:absolute;inset:0;display:none;flex-direction:column;justify-content:center;padding:0 7%;color:var(--ink);font-family:"VT323","Courier New",monospace;font-size:clamp(17px,7cqw,26px);line-height:1.15;background:var(--lcd);z-index:2;text-transform:uppercase}
-#ov h1{margin:0 0 4px;font-size:1.5em;font-weight:400;text-align:center;letter-spacing:.08em}
-#ov .row{padding:0 6px}#ov .sel{background:var(--ink);color:var(--lcd)}
-#ov .c{text-align:center}
-.keys{margin-top:16px;display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
-.k{border:0;border-radius:14px;background:var(--key);color:var(--keytx);height:46px;font:700 18px system-ui,sans-serif;box-shadow:0 3px 0 rgba(0,0,0,.35);cursor:pointer;user-select:none;touch-action:manipulation}
-.k:active{transform:translateY(2px);box-shadow:0 1px 0 rgba(0,0,0,.35)}
-.k small{display:block;font-size:9px;font-weight:600;opacity:.7;margin-top:-2px}
-.hint{text-align:center;color:#9aa8c0;font-size:12px;margin-top:14px}
+body{background:radial-gradient(120% 90% at 50% 0%,var(--page),var(--page2));display:flex;flex-direction:column;justify-content:center;align-items:center;min-height:100svh;font-family:system-ui,sans-serif;padding:16px;gap:14px}
+button{font-family:inherit}
+
+/* ---------- model picker ---------- */
+.picker{display:flex;gap:4px;padding:4px;border-radius:999px;background:var(--chip);box-shadow:0 2px 10px rgba(0,0,0,.12)}
+.picker button{border:0;background:none;color:var(--chiptx);font:600 13px system-ui;padding:7px 14px;border-radius:999px;cursor:pointer;opacity:.7}
+.picker button[aria-pressed="true"]{background:#2b3a55;color:#fff;opacity:1}
+.hint{text-align:center;color:var(--hint);font-size:12px;max-width:360px;line-height:1.7}
+.hint kbd{font:600 11px system-ui;padding:1px 5px;border-radius:4px;background:rgba(127,140,160,.18)}
+
+/* ---------- generic phone ---------- */
+/* width is capped so the whole real-proportion body (incl. antenna) fits the viewport */
+.phone{--ratio:2.35;--extra:0;--maxw:260px;position:relative;container-type:inline-size;
+ --u:calc(var(--w)/100);--w:min(calc(100vw - 32px),var(--maxw),calc((100svh - 170px)/(var(--ratio) + var(--extra))));width:var(--w);height:calc(var(--w)*var(--ratio));flex:none;
+ margin-top:calc(var(--extra) * var(--w));display:flex;flex-direction:column}
+.upper{display:flex;flex-direction:column;align-items:center}
+.top{display:flex;flex-direction:column;align-items:center;justify-content:center}
+.brand{font-weight:800;letter-spacing:.3em;text-indent:.3em}
+.screen{position:relative;display:flex;flex-direction:column;overflow:hidden;container-type:inline-size;background:var(--lcd)}
+.lcd{position:relative}
+canvas{display:block;width:100%;aspect-ratio:84/48}
+#ov{position:absolute;inset:0;display:none;flex-direction:column;justify-content:center;padding:0 7%;color:var(--ink);font-family:"VT323","Courier New",monospace;font-size:clamp(11px,7.2cqw,26px);line-height:1.1;background:var(--lcd);z-index:1;text-transform:uppercase}
+#ov h1{margin:0 0 3px;font-size:1.45em;font-weight:400;text-align:center;letter-spacing:.08em;border-bottom:2px solid var(--ink);padding-bottom:1px}
+#ov .row{padding:0 5px;display:flex;justify-content:space-between}#ov .sel{background:var(--ink);color:var(--lcdsolid)}
+#ov .c{text-align:center}#ov .blink{animation:bl 1s steps(1) infinite}@keyframes bl{50%{opacity:0}}
+.soft,.sbar{display:flex;justify-content:space-between;align-items:center;color:var(--ink);font-family:"VT323","Courier New",monospace;font-size:8.5cqw;line-height:1;padding:1cqw 4cqw}
+.sbar{display:none}
+.nav{display:none;width:100%}
+.phone[data-m="2110"] .nav.n2110,.phone[data-m="3310"] .nav.n3310,.phone[data-m="5200"] .nav.n5200{display:grid}
+.keys{flex:1 1 0;min-height:0;display:grid;grid-template-columns:repeat(3,1fr);grid-template-rows:repeat(4,minmax(0,1fr))}
+.k{min-height:0;min-width:0;position:relative;border:0;cursor:pointer;user-select:none;touch-action:manipulation;padding:0;display:flex;align-items:center;justify-content:center;gap:2cqw;line-height:1;transition:filter .05s}
+.k:active,.k.on{filter:brightness(.75)}
+.k b{font-weight:700}.k i{font-style:normal;font-weight:600;opacity:.8}
+.antenna,.pwr{display:none}
+/* 2110 & 3310: height follows content (no dead space); --ratio is only used to fit the viewport */
+.phone[data-m="2110"],.phone[data-m="3310"]{height:auto}
+.phone[data-m="2110"] .keys,.phone[data-m="3310"] .keys{flex:none;grid-template-rows:repeat(4,auto)}
+.k.off{opacity:.38;filter:grayscale(1) brightness(.85);cursor:default;box-shadow:none!important}
+.k.off:active{filter:grayscale(1) brightness(.85)}
+
+/* ---------- Nokia 2110 (148 × 47 mm) ---------- */
+.phone[data-m="2110"]{--ratio:2.3;--extra:.45;--maxw:200px;--lcd:#b4c08c;--lcdsolid:#b4c08c;--ink:#1d2618;--ghost:rgba(0,0,0,.04);
+ border-radius:calc(var(--u)*16) calc(var(--u)*16) calc(var(--u)*18) calc(var(--u)*18);padding:calc(var(--u)*7) calc(var(--u)*6) calc(var(--u)*14);
+ background:radial-gradient(circle at 20% 30%,#1a0c0e 0 calc(var(--u)*.35),transparent calc(var(--u)*.45)) 0 0/calc(var(--u)*2.3) calc(var(--u)*2.9),radial-gradient(circle at 70% 60%,#2a1012 0 calc(var(--u)*.3),transparent calc(var(--u)*.4)) calc(var(--u)*1) 0/calc(var(--u)*3.1) calc(var(--u)*2.1),radial-gradient(circle at 40% 80%,#2a1012 0 calc(var(--u)*.25),transparent calc(var(--u)*.35)) 0 calc(var(--u)*1)/calc(var(--u)*1.7) calc(var(--u)*3.7),radial-gradient(circle at 60% 20%,#e98a90 0 calc(var(--u)*.25),transparent calc(var(--u)*.35)) 0 0/calc(var(--u)*2.7) calc(var(--u)*2.3),linear-gradient(100deg,#8e1f27,#c63a43 35%,#b02a33 70%,#7a1820);
+ box-shadow:inset calc(var(--u)*3) 0 calc(var(--u)*4) rgba(255,255,255,.18),inset calc(var(--u)*-3) 0 calc(var(--u)*5) rgba(0,0,0,.4),0 24px 40px -14px rgba(0,0,0,.6)}
+.phone[data-m="2110"] .antenna{display:block;position:absolute;right:12cqw;bottom:100%;width:11cqw;height:calc(var(--extra)*100cqw + 2cqw);border-radius:5cqw 5cqw 0 0;background:linear-gradient(90deg,#111,#3a3a3a 40%,#0b0b0b);z-index:-1}
+.phone[data-m="2110"] .pwr{display:block;position:absolute;right:8cqw;top:5cqw;width:9cqw;height:9cqw;border-radius:50%;background:radial-gradient(circle at 35% 35%,#555,#111);box-shadow:0 0 0 1cqw rgba(0,0,0,.4)}
+.phone[data-m="2110"] .upper{background:#0b0b0c;border-radius:50% 50% 40% 40%/28% 28% 22% 22%;padding:12cqw 3cqw 10cqw;box-shadow:inset 0 0 0 1cqw rgba(255,255,255,.07),0 1cqw 2cqw rgba(0,0,0,.4)}
+.phone[data-m="2110"] .top{height:13cqw}
+.phone[data-m="2110"] .speaker{display:none}
+.phone[data-m="2110"] .brand{color:#e9e9e9;font-size:7.5cqw;letter-spacing:.12em;text-indent:.12em}
+.phone[data-m="2110"] .screen{width:76cqw;border-radius:2cqw;padding-top:2cqw;box-shadow:inset 0 0 3cqw rgba(0,0,0,.4)}
+.phone[data-m="2110"] .nav.n2110{grid-template-columns:1fr 1fr 1fr;grid-template-rows:auto auto;gap:3cqw 4cqw;padding:6cqw 4cqw 3cqw;align-items:center}
+.n2110 .sk{height:7cqw;border-radius:4cqw;background:linear-gradient(#2b2b2b,#0c0c0c);box-shadow:0 .8cqw 0 #000}
+.n2110 .sk::before{content:"";position:absolute;top:-3cqw;left:25%;right:25%;height:.9cqw;background:#4b77d6;border-radius:1cqw}
+.n2110 .rock{grid-row:1/3;grid-column:2;display:flex;flex-direction:column;gap:1cqw}
+.n2110 .rock .k{height:10cqw;background:linear-gradient(#2b2b2b,#0c0c0c);color:#ddd;font-size:5cqw;border-radius:6cqw 6cqw 2cqw 2cqw}
+.n2110 .rock .k+.k{border-radius:2cqw 2cqw 6cqw 6cqw}
+.n2110 .call,.n2110 .end{height:8cqw;border-radius:5cqw;background:linear-gradient(#2b2b2b,#0c0c0c);color:#57c45a;font-size:6cqw}
+.n2110 .end{color:#e0e0e0;font-size:4.5cqw;font-weight:700}
+.phone[data-m="2110"] .keys{gap:6cqw 5cqw;padding:9cqw 3cqw 0}
+.phone[data-m="2110"] .k.n{height:18cqw;border-radius:8cqw}
+.phone[data-m="2110"] .k.n{border-radius:5cqw;background:linear-gradient(#2e2e2e,#0e0e0e);color:#f2f2f2;box-shadow:0 .9cqw 0 #000,inset 0 .5cqw 0 rgba(255,255,255,.12)}
+.phone[data-m="2110"] .k.n b{font-size:6.5cqw}.phone[data-m="2110"] .k.n i{font-size:3.6cqw}
+
+/* ---------- Nokia 3310 (113 × 48 mm) ---------- */
+.phone[data-m="3310"]{--ratio:2.2;--extra:0;--maxw:250px;--lcd:#a3bd8a;--lcdsolid:#a3bd8a;--ink:#1e2a1b;--ghost:rgba(0,0,0,.045);
+ border-radius:calc(var(--u)*30) calc(var(--u)*30) calc(var(--u)*34) calc(var(--u)*34)/calc(var(--u)*24) calc(var(--u)*24) calc(var(--u)*40) calc(var(--u)*40);padding:calc(var(--u)*5) calc(var(--u)*4) calc(var(--u)*22);
+ background:linear-gradient(100deg,#1d2638,#3a4866 30%,#2f3c57 65%,#18202f);
+ box-shadow:inset 0 calc(var(--u)*2) calc(var(--u)*2) rgba(255,255,255,.15),inset 0 calc(var(--u)*-4) calc(var(--u)*6) rgba(0,0,0,.45),0 26px 44px -16px rgba(0,0,0,.6)}
+.phone[data-m="3310"] .upper{background:linear-gradient(180deg,#d0d3d8,#9da2aa);border-radius:40cqw 40cqw 14cqw 14cqw/22cqw 22cqw 10cqw 10cqw;padding:3cqw 4cqw 5cqw;box-shadow:inset 0 .8cqw 1cqw rgba(255,255,255,.7),inset 0 -1cqw 2cqw rgba(0,0,0,.25),0 1cqw 2cqw rgba(0,0,0,.4)}
+.phone[data-m="3310"] .top{height:19cqw}
+.phone[data-m="3310"] .speaker{display:block;width:2cqw;height:10cqw;margin-bottom:2cqw;background:radial-gradient(circle,#1c2230 .8cqw,transparent .95cqw) 0 0/2cqw 2cqw}
+.phone[data-m="3310"] .brand{color:#2b3550;font-size:6cqw;background:#d9dce1;padding:.5cqw 2cqw;border-radius:1cqw}
+.phone[data-m="3310"] .screen{width:84cqw;padding:2cqw 1cqw 0;border:2.5cqw solid #2f3647;border-radius:3cqw 3cqw 2cqw 2cqw;box-shadow:inset 0 0 3cqw rgba(0,0,0,.45)}
+.phone[data-m="3310"] .soft{justify-content:center}
+.phone[data-m="3310"] .soft span:not(.mid){display:none}
+.phone[data-m="3310"] .nav.n3310{grid-template-columns:1fr 2.2fr 1fr;gap:1cqw;padding:3cqw 0 0;align-items:center}
+.n3310 .navi{height:12cqw;border-radius:50%/60% 60% 40% 40%;background:linear-gradient(#e9ecf0,#a8aeb7);box-shadow:0 1cqw 0 #6c727c}
+.n3310 .navi::after{content:"";position:absolute;left:30%;right:30%;top:40%;height:1cqw;border-radius:1cqw;background:#3ba870}
+.n3310 .c,.n3310 .rock{height:10cqw;background:linear-gradient(#5f6c88,#36415a);color:#e5e9f1;font-size:5cqw;box-shadow:0 .8cqw 0 #1a2131}
+.n3310 .c{border-radius:6cqw 2cqw 2cqw 8cqw}
+.n3310 .rock{display:flex;flex-direction:column;border-radius:2cqw 6cqw 8cqw 2cqw;overflow:hidden;padding:0}
+.n3310 .rock .k{flex:1;width:100%;background:none;color:#e5e9f1;font-size:3.5cqw}
+.phone[data-m="3310"] .keys{gap:4cqw 4cqw;padding:9cqw 3cqw 0}
+.phone[data-m="3310"] .k.n{height:16cqw}
+.phone[data-m="3310"] .k.n{border-radius:50%;background:linear-gradient(#56627d,#2d364c);color:#e9edf5;box-shadow:0 1cqw 0 #121826,inset 0 .6cqw 0 rgba(255,255,255,.2)}
+.phone[data-m="3310"] .k.n b{font-size:6.5cqw}.phone[data-m="3310"] .k.n i{font-size:3.6cqw}
+.phone[data-m="3310"] .k.n:nth-child(3n+1){transform:rotate(-8deg)}.phone[data-m="3310"] .k.n:nth-child(3n){transform:rotate(8deg)}
+.phone[data-m="3310"] .k.n:nth-child(3n+2){transform:translateY(1.5cqw)}
+
+/* ---------- Nokia 5200 (slider open ≈ 116 × 48 mm) ---------- */
+.phone[data-m="5200"]{--ratio:2.42;--extra:0;--maxw:250px;--lcd:linear-gradient(180deg,#5ec4ff,#1d74d6 70%,#1557b0);--lcdsolid:#2a86e0;--ink:#ffffff;--ghost:rgba(255,255,255,.05);
+ border-radius:calc(var(--u)*9);padding:0 0 calc(var(--u)*4);background:linear-gradient(90deg,#11142a,#262c52 30%,#1f2448 70%,#0d1022);box-shadow:0 26px 44px -16px rgba(0,0,0,.6)}
+.phone[data-m="5200"] .upper{background:linear-gradient(90deg,#d9d9de,#fbfbfd 25%,#f1f1f4 75%,#c9c9d0);border-radius:9cqw 9cqw 6cqw 6cqw;padding:3cqw 5cqw 4cqw;box-shadow:0 2cqw 3cqw rgba(0,0,0,.45)}
+.phone[data-m="5200"] .top{width:100%;height:13cqw;border-radius:4cqw 4cqw 0 0;background:repeating-linear-gradient(115deg,#b9bcc4 0 .5cqw,#dfe1e6 .5cqw 1.2cqw);box-shadow:inset 0 0 1cqw rgba(0,0,0,.25)}
+.phone[data-m="5200"] .speaker{display:block;width:14cqw;height:1.6cqw;border-radius:1cqw;background:#3a3d48}
+.phone[data-m="5200"] .brand{display:none}
+.phone[data-m="5200"] .screen{width:90cqw;padding:0;border:4cqw solid #3b2f4a;border-top-width:2cqw;border-radius:0 0 2cqw 2cqw;aspect-ratio:128/160;justify-content:space-between}
+.phone[data-m="5200"] .sbar{display:flex;font-family:system-ui,sans-serif;font-size:5cqw;font-weight:700;color:#fff;text-shadow:0 .4cqw 0 rgba(0,0,0,.35);padding:2cqw 3cqw}
+.sbar .sig{display:flex;align-items:flex-end;gap:.6cqw;height:4cqw}.sbar .sig span{width:1.2cqw;background:#fff}
+.phone[data-m="5200"] .lcd{margin:0 2cqw;border-radius:1.5cqw;overflow:hidden;background:rgba(0,30,90,.35);box-shadow:inset 0 0 0 .5cqw rgba(255,255,255,.35)}
+.phone[data-m="5200"] #ov{background:linear-gradient(180deg,#2e8ae6,#155fbb);color:#fff}
+.phone[data-m="5200"] #ov .sel{background:#fff;color:#155fbb}
+.phone[data-m="5200"] #ov h1{border-color:#fff}
+.phone[data-m="5200"] .soft{font-family:system-ui,sans-serif;font-weight:700;font-size:5cqw;color:#fff;background:linear-gradient(#0d3d86,#082a63);padding:2cqw 3cqw}
+.phone[data-m="5200"] .nav.n5200{grid-template-columns:1fr 1.7fr 1fr;grid-template-rows:1fr 1fr;gap:2cqw;background:linear-gradient(#5c4a72,#3b2f4a);width:90cqw;border-radius:0 0 6cqw 6cqw;padding:4cqw 3cqw 3cqw;align-items:center}
+.n5200 .sk{height:7cqw;border-radius:2cqw;background:linear-gradient(#f4f4f7,#c4c4cc);box-shadow:0 .8cqw 0 #22192d}
+.n5200 .call{color:#2eaa48;font-size:5cqw}.n5200 .end{color:#d83a3a;font-size:5cqw}
+.n5200 .dpad{grid-row:1/3;grid-column:2;position:relative;aspect-ratio:1;border-radius:50%;background:conic-gradient(from 30deg,#f5d9a0,#a17a3d,#f8e3b5,#8b6a33,#f5d9a0);box-shadow:0 1cqw 2cqw rgba(0,0,0,.5)}
+.n5200 .dpad .ring{position:absolute;inset:1.6cqw;border-radius:50%;background:radial-gradient(#6e5d84,#43355a)}
+.n5200 .dpad .k{position:absolute;background:none;color:#f1e6ff;font-size:3.5cqw}
+.n5200 .dpad .u{top:2cqw;left:35%;width:30%;height:28%}.n5200 .dpad .d{bottom:2cqw;left:35%;width:30%;height:28%}
+.n5200 .dpad .l{left:2cqw;top:35%;height:30%;width:28%}.n5200 .dpad .r{right:2cqw;top:35%;height:30%;width:28%}
+.n5200 .dpad .o{inset:32%;border-radius:50%;background:linear-gradient(#e8e8ef,#a9a9b6);box-shadow:inset 0 .5cqw 0 #fff}
+.phone[data-m="5200"] .keys{gap:2.4cqw;padding:5cqw 10cqw 2cqw}
+.phone[data-m="5200"] .k.n{border-radius:2.5cqw;background:linear-gradient(180deg,#f2f3f7,#b7bac4);box-shadow:0 .7cqw 0 #070914,0 0 3cqw rgba(80,160,255,.35);justify-content:space-between;padding:0 2.5cqw}
+.phone[data-m="5200"] .k.n b{font-size:5.5cqw;color:#2a6cf0;text-shadow:0 0 1.5cqw rgba(60,140,255,.8)}.phone[data-m="5200"] .k.n i{font-size:3.4cqw;color:#3d4458}
+@media (max-width:420px){.picker button{padding:7px 10px;font-size:12px}}
 </style>
 </head>
 <body>
-<div class="phone">
-  <div class="brand">NOKIA</div>
-  <div class="bezel"><div class="lcd"><canvas id="cv" width="84" height="48"></canvas><div id="ov"></div></div></div>
-  <div class="keys">
-    <button class="k" data-k="c">C<small>jeda / kembali</small></button>
-    <button class="k" data-k="up">2<small>atas</small></button>
-    <button class="k" data-k="ok">OK<small>pilih</small></button>
-    <button class="k" data-k="left">4<small>kiri</small></button>
-    <button class="k" data-k="down">8<small>bawah</small></button>
-    <button class="k" data-k="right">6<small>kanan</small></button>
-  </div>
-  <div class="hint">Keyboard: panah / WASD · Enter = OK · P / Esc = jeda</div>
+<div class="picker" role="group" aria-label="Model ponsel">
+  <button data-model="2110">Nokia 2110</button><button data-model="3310">Nokia 3310</button><button data-model="5200">Nokia 5200</button>
 </div>
+<div class="phone" id="phone" data-m="3310">
+  <div class="antenna"></div><div class="pwr"></div>
+  <div class="upper">
+    <div class="top"><div class="speaker"></div><div class="brand">NOKIA</div></div>
+    <div class="screen">
+      <div class="sbar"><span class="sig"><span style="height:35%"></span><span style="height:60%"></span><span style="height:85%"></span><span style="height:100%"></span></span><span>SNAKE II</span><span id="clock">12:00</span></div>
+      <div class="lcd"><canvas id="cv" width="672" height="384"></canvas><div id="ov"></div></div>
+      <div class="soft"><span>Pilih</span><span class="mid">Menu</span><span>Jeda</span></div>
+    </div>
+    <div class="nav n2110">
+      <button class="k sk" data-k="ok" aria-label="OK"></button>
+      <div class="rock"><button class="k" data-k="up">▲</button><button class="k" data-k="down">▼</button></div>
+      <button class="k sk" data-k="c" aria-label="Jeda"></button>
+      <button class="k call" data-k="ok" aria-label="OK">✆</button>
+      <button class="k end" data-k="c">C</button>
+    </div>
+    <div class="nav n3310">
+      <button class="k c" data-k="c">C</button>
+      <button class="k navi" data-k="ok" aria-label="OK"></button>
+      <div class="rock"><button class="k" data-k="up">▲</button><button class="k" data-k="down">▼</button></div>
+    </div>
+    <div class="nav n5200">
+      <button class="k sk" data-k="ok" aria-label="OK"></button>
+      <div class="dpad"><div class="ring"></div>
+        <button class="k u" data-k="up">▲</button><button class="k d" data-k="down">▼</button>
+        <button class="k l" data-k="left">◀</button><button class="k r" data-k="right">▶</button>
+        <button class="k o" data-k="ok" aria-label="OK"></button></div>
+      <button class="k sk" data-k="c" aria-label="Jeda"></button>
+      <button class="k sk call" data-k="ok" aria-label="OK">✆</button>
+      <button class="k sk end" data-k="c" aria-label="Jeda">✆</button>
+    </div>
+  </div>
+  <div class="keys">
+    <button class="k n off" tabindex="-1" aria-disabled="true"><b>1</b><i>oo</i></button>
+    <button class="k n" data-k="up"><b>2</b><i>abc</i></button>
+    <button class="k n off" tabindex="-1" aria-disabled="true"><b>3</b><i>def</i></button>
+    <button class="k n" data-k="left"><b>4</b><i>ghi</i></button>
+    <button class="k n off" tabindex="-1" aria-disabled="true"><b>5</b><i>jkl</i></button>
+    <button class="k n" data-k="right"><b>6</b><i>mno</i></button>
+    <button class="k n off" tabindex="-1" aria-disabled="true"><b>7</b><i>pqrs</i></button>
+    <button class="k n" data-k="down"><b>8</b><i>tuv</i></button>
+    <button class="k n off" tabindex="-1" aria-disabled="true"><b>9</b><i>wxyz</i></button>
+    <button class="k n off" tabindex="-1" aria-disabled="true"><b>*</b><i>+</i></button>
+    <button class="k n off" tabindex="-1" aria-disabled="true"><b>0</b><i>⎵</i></button>
+    <button class="k n off" tabindex="-1" aria-disabled="true"><b>#</b><i>⇧</i></button>
+  </div>
+</div>
+<div class="hint">Tombol <kbd>2</kbd><kbd>4</kbd><kbd>6</kbd><kbd>8</kbd> / <kbd>←↑→↓</kbd> gerak · <kbd>Enter</kbd> OK · <kbd>P</kbd>/<kbd>Esc</kbd> jeda · <kbd>M</kbd> ganti ponsel</div>
 <script>
 const C=21,R=10,TOP=8,BT=30,MAZES=["Tanpa maze","Maze 1","Maze 2"];
 const cv=document.getElementById('cv'),ctx=cv.getContext('2d'),ov=document.getElementById('ov');
-const BG=getComputedStyle(document.documentElement).getPropertyValue('--lcd').trim()||'#9cb38c',INK='#243021';
+const SC=8;ctx.scale(SC,SC);let INK='#1e2a1b',GHOST='rgba(0,0,0,.045)',SH='rgba(0,0,0,.28)';
+const phone=document.getElementById('phone'),MODELS=['2110','3310','5200'];
+function setModel(m){phone.dataset.m=m;document.querySelectorAll('.picker button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.model==m));
+ const cs=getComputedStyle(phone);INK=cs.getPropertyValue('--ink').trim();GHOST=cs.getPropertyValue('--ghost').trim();SH=m=='5200'?'rgba(0,20,70,.55)':'rgba(0,0,0,.28)';
+ try{localStorage.setItem('snake2model',m)}catch(e){}draw()}
+document.querySelectorAll('.picker button').forEach(b=>b.onclick=()=>setModel(b.dataset.model));
+const clock=()=>{const d=new Date();document.getElementById('clock').textContent=String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0')};clock();setInterval(clock,15000);
 const DIG=["111101101101111","010110010010111","111001111100111","111001111001111","101101111001001","111100111001111","111100111101111","111001001001001","111101111101111","111101111001111"];
 const HEART=[".##.##.","#######","#######",".#####.","..###..","...#..."];
 let mode='menu',sel=0,level=1,maze=0,hi=0,timer=null;
@@ -65,7 +211,7 @@ function spawnBonus(){for(let i=0;i<200;i++){const x=Math.random()*(C-1)|0,y=Mat
 function start(){walls=mkWalls();s=[{x:6,y:5},{x:5,y:5},{x:4,y:5},{x:3,y:5}];dir={x:1,y:0};q=[];food=null;bonus=null;
  score=0;eaten=0;grow=0;miss=0;placeFood();mode='play';ov.style.display='none';draw();loop()}
 function loop(){clearTimeout(timer);if(mode!='play')return;tick();timer=setTimeout(loop,190-(level-1)*17)}
-function die(){mode='over';clearTimeout(timer);if(score>hi){hi=score;try{localStorage.setItem('snake2hi',hi)}catch(e){}}
+function die(){mode='over';try{navigator.vibrate&&navigator.vibrate(120)}catch(e){}clearTimeout(timer);if(score>hi){hi=score;try{localStorage.setItem('snake2hi',hi)}catch(e){}}
  draw();setTimeout(()=>{if(mode=='over')showOver()},700)}
 function tick(){
  if(q.length)dir=q.shift();
@@ -81,22 +227,42 @@ function tick(){
  draw()}
 function bonusVal(){return Math.max(level,Math.round((5+miss)*7*level*bonus.t/BT))}
 
-function px(x,y,w=1,h=1){ctx.fillRect(x,y,w,h)}
-function num(n,x,y){String(n).split('').forEach((d,i)=>{const g=DIG[d];for(let j=0;j<15;j++)if(g[j]=='1')px(x+i*4+j%3,y+(j/3|0))})}
+// dot-matrix pixel: tiny gap between dots + soft LCD drop shadow
+function px(x,y,w=1,h=1){for(let i=0;i<w;i++)for(let j=0;j<h;j++)ctx.fillRect(x+i+.06,y+j+.06,.88,.88)}
+function clr(x,y){ctx.clearRect(x,y,1,1)}
+function num(n,x,y){String(n).padStart(4,'0').split('').forEach((d,i)=>{const g=DIG[d];for(let j=0;j<15;j++)if(g[j]=='1')px(x+i*4+j%3,y+(j/3|0))})}
 function draw(){
- ctx.fillStyle=BG;ctx.fillRect(0,0,84,48);ctx.fillStyle=INK;
- num(score,2,1);px(0,7,84,1);
+ ctx.clearRect(0,0,84,48);
+ ctx.fillStyle=GHOST;for(let x=0;x<84;x++)for(let y=0;y<48;y++)ctx.fillRect(x+.06,y+.06,.88,.88);
+ ctx.shadowColor=SH;ctx.shadowOffsetX=SC*.35;ctx.shadowOffsetY=SC*.35;ctx.shadowBlur=SC*.3;
+ ctx.fillStyle=INK;
+ num(score||0,2,1);px(0,7,84,1);
  if(bonus){const w=Math.ceil(bonus.t/BT*30);px(82-w,2,w,3)}
  walls&&walls.forEach(k=>{const[x,y]=k.split(',').map(Number);px(x*4,TOP+y*4,4,4)});
- if(food)[[1,0],[0,1],[1,1],[2,1],[1,2]].forEach(d=>px(food.x*4+d[0],TOP+food.y*4+d[1]));
+ if(food)[[1,0],[0,1],[2,1],[1,2]].forEach(d=>px(food.x*4+d[0],TOP+food.y*4+d[1]));
  if(bonus&&(bonus.t>10||bonus.t%2==0))HEART.forEach((r,j)=>{for(let i=0;i<7;i++)if(r[i]=='#')px(bonus.x*4+i,TOP+bonus.y*4+1+j)});
- s&&s.forEach((p,i)=>{ctx.fillStyle=INK;px(p.x*4,TOP+p.y*4,3,3);
-  if(i==0&&mode!='over'){ctx.fillStyle=BG;px(p.x*4+1,TOP+p.y*4+1)}
-  if(mode=='over'&&i%2==0){ctx.fillStyle=BG;px(p.x*4+1,TOP+p.y*4+1)}});
+ if(s){const dead=mode=='over';
+  s.forEach((p,i)=>{const X=p.x*4,Y=TOP+p.y*4;
+   if(dead&&i%2&&i)return;
+   if(i==0){drawHead(X,Y,dead);}
+   else if(i==s.length-1)px(X+1,Y,1,3),px(X,Y+1,3,1);
+   else px(X,Y,3,3);
+   const n=s[i+1];if(n&&!dead){const dx=n.x-p.x,dy=n.y-p.y;
+    if(dx==1)px(X+3,Y,1,3);else if(dx==-1)px(X-1,Y,1,3);else if(dy==1)px(X,Y+3,3,1);else if(dy==-1)px(X,Y-1,3,1)}});}
+ ctx.shadowColor='transparent';
 }
-function menu(){mode='menu';clearTimeout(timer);const r=(i,t)=>`<div class="row ${sel==i?'sel':''}">${t}</div>`;
- ov.style.display='flex';ov.innerHTML=`<h1>Snake II</h1>${r(0,'Main')}${r(1,'Level: &lt; '+level+' &gt;')}${r(2,'&lt; '+MAZES[maze]+' &gt;')}<div class="c" style="margin-top:4px;font-size:.8em">Skor tertinggi ${hi}</div>`}
-function showOver(){ov.style.display='flex';ov.innerHTML=`<h1>Game Over</h1><div class="c">Skor: ${score}</div><div class="c">Tertinggi: ${hi}</div><div class="c" style="margin-top:6px;font-size:.8em">Tekan OK</div>`}
+function drawHead(X,Y,dead){
+ px(X,Y,3,3);if(dead)return;
+ // eye: on the side perpendicular to direction
+ const eye=dir.x?[X+1+dir.x,Y]:[X,Y+1+dir.y];
+ ctx.save();ctx.shadowColor='transparent';ctx.globalCompositeOperation='destination-out';ctx.fillRect(eye[0]+.06,eye[1]+.06,.88,.88);
+ // open mouth if food right ahead
+ if(food&&s[0].x+dir.x==food.x&&s[0].y+dir.y==food.y){const m=[X+1+dir.x,Y+1+dir.y];ctx.fillRect(m[0]+.06,m[1]+.06,.88,.88)}
+ ctx.restore();
+}
+function menu(){mode='menu';clearTimeout(timer);const r=(i,t)=>`<div class="row ${sel==i?'sel':''}">${t.startsWith('<')?t:'<span>'+t+'</span>'}</div>`;
+ ov.style.display='flex';ov.innerHTML=`<h1>Snake II</h1>${r(0,'Main')}${r(1,'<span>Level</span><span>&lt; '+level+' &gt;</span>')}${r(2,'<span>&lt;</span><span>'+MAZES[maze]+'</span><span>&gt;</span>')}<div class="c" style="margin-top:4px;font-size:.8em">Top: ${String(hi).padStart(4,'0')}</div>`}
+function showOver(){ov.style.display='flex';ov.innerHTML=`<h1>Game Over</h1><div class="c">Skor: ${score}</div><div class="c">Tertinggi: ${hi}</div><div class="c blink" style="margin-top:6px;font-size:.8em">Tekan OK</div>`}
 function showPause(){ov.style.display='flex';ov.innerHTML=`<h1>Jeda</h1><div class="c">Skor: ${score}</div><div class="c" style="margin-top:6px;font-size:.8em">OK / C = lanjut</div>`}
 
 const V={up:{x:0,y:-1},down:{x:0,y:1},left:{x:-1,y:0},right:{x:1,y:0}};
@@ -113,10 +279,11 @@ function press(k){
  else if(mode=='pause'){if(k=='c'||k=='ok'){mode='play';ov.style.display='none';loop()}}
  else if(mode=='over'){if(k=='ok'||k=='c')menu()}
 }
-document.querySelectorAll('.k').forEach(b=>b.addEventListener('pointerdown',e=>{e.preventDefault();press(b.dataset.k)}));
+document.querySelectorAll('.k[data-k]').forEach(b=>b.addEventListener('pointerdown',e=>{e.preventDefault();press(b.dataset.k)}));
 const KM={ArrowUp:'up',ArrowDown:'down',ArrowLeft:'left',ArrowRight:'right',w:'up',s:'down',a:'left',d:'right',Enter:'ok',' ':'c',p:'c',Escape:'c',2:'up',8:'down',4:'left',6:'right'};
-addEventListener('keydown',e=>{const k=KM[e.key];if(k){e.preventDefault();press(k)}});
-draw();menu();
+addEventListener('keydown',e=>{if(e.key=='m'||e.key=='M'){setModel(MODELS[(MODELS.indexOf(phone.dataset.m)+1)%3]);return}const k=KM[e.key.length==1?e.key.toLowerCase():e.key];if(k){e.preventDefault();press(k);
+ const b=document.querySelector(`.keys .k[data-k="${k}"]`);if(b){b.classList.add('on');setTimeout(()=>b.classList.remove('on'),110)}}});
+let m0='3310';try{m0=localStorage.getItem('snake2model')||m0}catch(e){}setModel(MODELS.includes(m0)?m0:'3310');menu();
 </script>
 </body>
 </html>
